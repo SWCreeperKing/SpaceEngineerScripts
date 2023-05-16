@@ -82,7 +82,7 @@
       <Compile Include="AutoBuildAndRepair.cs" />
       <Compile Include="AutoDoors.cs" />
       <Compile Include="AutoHangerDoors.cs" />
-      <Compile Include="CricketManager.cs" />
+      <Compile Include="ShipInventoryPercent.cs" />
       <Compile Include="InventoryManager.cs" />
       <Compile Include="RefineryScript.cs" />
       <Compile Include="Stolen\BuildAndRepairExample.cs" />

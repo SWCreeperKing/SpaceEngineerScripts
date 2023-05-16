@@ -19,7 +19,7 @@ using VRage.Game.GUI.TextPanel;
 using VRage.Game.ObjectBuilders.Definitions;
 
 // Change this namespace for each script you create.
-namespace SpaceEngineers.CricketManager
+namespace SpaceEngineers.ShipInventoryPercent
 {
     public sealed class Program : MyGridProgram
     {
@@ -28,7 +28,7 @@ namespace SpaceEngineers.CricketManager
         #endregion
 
         private const UpdateType UpdateFlags = UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script;
-        
+
         private readonly List<IMyTerminalBlock> Containers = new List<IMyTerminalBlock>();
         private readonly List<IMyTextSurface> Surfaces = new List<IMyTextSurface>();
         private readonly List<IMyInteriorLight> Alarms = new List<IMyInteriorLight>();
@@ -70,7 +70,7 @@ namespace SpaceEngineers.CricketManager
             GridTerminalSystem.GetBlocksOfType(Containers, SearchForCargo);
             Containers.RemoveAll(container => container.CubeGrid.Name != Me.CubeGrid.Name);
             Echo($"Found {Containers.Count} Inventories");
-            
+
             GridTerminalSystem.GetBlocksOfType(Surfaces);
             Surfaces.RemoveAll(surface => ((IMyTerminalBlock) surface).CubeGrid.Name != Me.CubeGrid.Name);
 
@@ -83,7 +83,7 @@ namespace SpaceEngineers.CricketManager
             }
 
             Echo($"Surfaces {Surfaces.Count} Found");
-            
+
             GridTerminalSystem.GetBlocksOfType(Alarms);
             Alarms.RemoveAll(alarm => alarm.CubeGrid.Name != Me.CubeGrid.Name);
 
@@ -125,10 +125,7 @@ namespace SpaceEngineers.CricketManager
             return MyTuple.Create(used, total);
         }
 
-        public float Percentify(MyTuple<MyFixedPoint, MyFixedPoint> tuple)
-        {
-            return (float) tuple.Item1 / (float) tuple.Item2;
-        }
+        public float Percentify(MyTuple<MyFixedPoint, MyFixedPoint> tuple) => (float) tuple.Item1 / (float) tuple.Item2;
 
         public Color GetPercentColor(float percent)
         {

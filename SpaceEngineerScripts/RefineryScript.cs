@@ -52,7 +52,7 @@ namespace SpaceEngineers.RefineryScript
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
             Definitions = Ids.Select(id => MyDefinitionId.Parse($"MyObjectBuilder_BlueprintDefinition/{id}")).ToArray();
-            ItemTypes = Plane.Select(plane => MyItemType.MakeOre(plane)).ToArray();
+            ItemTypes = Plane.Select(MyItemType.MakeOre).ToArray();
             Setup();
         }
 
@@ -203,10 +203,8 @@ namespace SpaceEngineers.RefineryScript
 
         public MySprite MakeText(string text, Vector2 pos, TextAlignment align = TextAlignment.CENTER,
             Color? color = null, float scale = 1f, string fontId = null, Vector2? size = null)
-        {
-            return new MySprite(SpriteType.TEXT, text, pos, size ?? Vector2.Zero, color ?? Color.White, fontId, align,
+            => new MySprite(SpriteType.TEXT, text, pos, size ?? Vector2.Zero, color ?? Color.White, fontId, align,
                 scale);
-        }
 
         public void Setup()
         {

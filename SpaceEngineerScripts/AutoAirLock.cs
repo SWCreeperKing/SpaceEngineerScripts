@@ -233,8 +233,7 @@ namespace SpaceEngineers.AutoAirLock
                         break;
                 }
             }
-
-
+            
             public void RunStateCheck()
             {
                 ActiveState = AirLockState.Depressurize;

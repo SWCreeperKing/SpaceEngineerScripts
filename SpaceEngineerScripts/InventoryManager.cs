@@ -30,7 +30,7 @@ namespace SpaceEngineers.InventoryManager
         #endregion
 
         private const UpdateType UpdateFlags = UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script;
-        
+
         private MonitorSetup CargoDisplay;
         private readonly List<IMyTextPanel> Surfaces = new List<IMyTextPanel>();
         private readonly List<MonitorSetup> InventoryDisplays = new List<MonitorSetup>();
@@ -38,7 +38,10 @@ namespace SpaceEngineers.InventoryManager
         private readonly List<IMyTerminalBlock> Containers = new List<IMyTerminalBlock>();
         private readonly List<IMyTerminalBlock> ShipContainers = new List<IMyTerminalBlock>();
         private readonly Dictionary<string, float> ItemCache = new Dictionary<string, float>();
-        private readonly Dictionary<string, Dictionary<string, float>> AllItems = new Dictionary<string, Dictionary<string, float>>();
+
+        private readonly Dictionary<string, Dictionary<string, float>> AllItems =
+            new Dictionary<string, Dictionary<string, float>>();
+
         private readonly Color VeryDarkRed = new Color(50, 0, 0);
 
         public Program()
@@ -143,18 +146,16 @@ namespace SpaceEngineers.InventoryManager
                     var type = item.Type.TypeId;
                     var subType = item.Type.SubtypeId;
                     var amount = (float) item.Amount;
+                    float originalAmount;
 
-                    if (!AllItems.ContainsKey(type))
+                    Dictionary<string, float> innerInv;
+                    if (!AllItems.TryGetValue(type, out innerInv))
                     {
-                        AllItems.Add(type, new Dictionary<string, float>());
+                        AllItems.Add(type, innerInv = new Dictionary<string, float>());
                     }
 
-                    if (!AllItems[type].ContainsKey(subType))
-                    {
-                        AllItems[type][subType] = 0;
-                    }
-
-                    AllItems[type][subType] += amount;
+                    innerInv.TryGetValue(subType, out originalAmount);
+                    innerInv[subType] = originalAmount + amount;
                 }
             }
 
@@ -231,7 +232,7 @@ namespace SpaceEngineers.InventoryManager
 
         public MyTuple<MyFixedPoint, MyFixedPoint> GetSingleCargoData(IMyTerminalBlock block)
         {
-            IMyInventory inventory = block.GetInventory();
+            var inventory = block.GetInventory();
             return MyTuple.Create(inventory.CurrentVolume, inventory.MaxVolume);
         }
 
@@ -249,10 +250,7 @@ namespace SpaceEngineers.InventoryManager
             return MyTuple.Create(used, total);
         }
 
-        public float Percentify(MyTuple<MyFixedPoint, MyFixedPoint> tuple)
-        {
-            return (float) tuple.Item1 / (float) tuple.Item2;
-        }
+        public float Percentify(MyTuple<MyFixedPoint, MyFixedPoint> tuple) => (float) tuple.Item1 / (float) tuple.Item2;
 
         public Color GetPercentColor(float percent)
         {

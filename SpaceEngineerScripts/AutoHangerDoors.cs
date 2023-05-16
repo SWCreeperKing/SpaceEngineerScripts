@@ -166,13 +166,14 @@ namespace SpaceEngineers.AutoHangerDoor
                 foreach (var door in hangerDoors)
                 {
                     var id = door.CustomName.Split(' ')[2];
+                    List<IMyAirtightHangarDoor> doorList;
 
-                    if (!Doors.ContainsKey(id))
+                    if (!Doors.TryGetValue(id, out doorList))
                     {
-                        Doors.Add(id, new List<IMyAirtightHangarDoor>());
+                        Doors.Add(id, doorList = new List<IMyAirtightHangarDoor>());
                     }
 
-                    Doors[id].Add(door);
+                    doorList.Add(door);
                 }
 
                 foreach (var id in Ids)

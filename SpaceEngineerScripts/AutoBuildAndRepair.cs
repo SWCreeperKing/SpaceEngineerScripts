@@ -27,15 +27,15 @@ namespace SpaceEngineers.AutoBuildAndRepair
         #endregion
 
         private const UpdateType UpdateFlags = UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script;
-        
-        private IMyTextSurface PanelSurface;
-        private Vector2 SurfaceSize;
-        private readonly Color[] ColorOptions = new Color[] { Color.White, new Color(60, 60, 60) };
-        private readonly List<IMyShipWelder> RepairSystems = new List<IMyShipWelder>();
+
         private readonly List<IMyAssembler> Assemblers = new List<IMyAssembler>();
-        private List<long> AssemblerIds;
+        private readonly List<IMyShipWelder> RepairSystems = new List<IMyShipWelder>();
+        private readonly Color[] ColorOptions = { Color.White, new Color(60, 60, 60) };
         private readonly Dictionary<MyDefinitionId, int> Missing = new Dictionary<MyDefinitionId, int>();
-        private Func<IEnumerable<long>, MyDefinitionId, int, int> EnsureQueued = null;
+        private Vector2 SurfaceSize;
+        private List<long> AssemblerIds;
+        private IMyTextSurface PanelSurface;
+        private Func<IEnumerable<long>, MyDefinitionId, int, int> EnsureQueued;
 
         public Program()
         {
@@ -63,7 +63,7 @@ namespace SpaceEngineers.AutoBuildAndRepair
                     Echo("EnsureQueue Failed");
                 }
             }
-            
+
             var frame = PanelSurface.DrawFrame();
 
             MissingComponents();
@@ -107,33 +107,37 @@ namespace SpaceEngineers.AutoBuildAndRepair
             }
 
             frame.Dispose();
-            CheckAssemblerQueues();
+
+            try
+            {
+                CheckAssemblerQueues();
+            }
+            catch
+            {
+                // still errors so just in case
+            }
         }
 
         public MySprite MakeText(string text, Vector2 pos, TextAlignment align = TextAlignment.CENTER,
-            Color? color = null, float scale = 1f,
-            string fontId = null, Vector2? size = null)
-        {
-            return new MySprite(SpriteType.TEXT, text, pos, size ?? Vector2.Zero, color ?? Color.White, fontId, align,
+            Color? color = null, float scale = 1f, string fontId = null, Vector2? size = null)
+            => new MySprite(SpriteType.TEXT, text, pos, size ?? Vector2.Zero, color ?? Color.White, fontId, align,
                 scale);
-        }
 
         public void MissingComponents()
         {
             Missing.Clear();
 
-            foreach (var builder in RepairSystems)
+            foreach (var dict in RepairSystems
+                         .Select(builder
+                             => builder.GetValue<Dictionary<MyDefinitionId, int>>("BuildAndRepair.MissingComponents"))
+                         .Where(dict => dict != null && dict.Any()))
             {
-                var dict =
-                    builder.GetValue<Dictionary<MyDefinitionId, int>>("BuildAndRepair.MissingComponents");
-                if (dict == null || !dict.Any()) continue;
-
                 int value;
                 foreach (var newItem in dict)
                 {
-                    if (Missing.TryGetValue(newItem.Key, out value))
+                    if (Missing.TryGetValue(newItem.Key, out value) && newItem.Value > value)
                     {
-                        if (newItem.Value > value) Missing[newItem.Key] = newItem.Value;
+                        Missing[newItem.Key] = newItem.Value;
                     }
                     else
                     {
