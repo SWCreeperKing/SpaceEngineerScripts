@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+    <PropertyGroup>
+        <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+        <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+        <ProjectGuid>{43B4C501-0E06-4681-A81A-3C6A965FB0B5}</ProjectGuid>
+        <OutputType>Library</OutputType>
+        <AppDesignerFolder>Properties</AppDesignerFolder>
+        <RootNamespace>SpaceEngineerScripts</RootNamespace>
+        <AssemblyName>SpaceEngineerScripts</AssemblyName>
+        <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+        <FileAlignment>512</FileAlignment>
+        <LangVersion>6</LangVersion>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+        <PlatformTarget>AnyCPU</PlatformTarget>
+        <DebugSymbols>true</DebugSymbols>
+        <DebugType>full</DebugType>
+        <Optimize>false</Optimize>
+        <OutputPath>bin\Debug\</OutputPath>
+        <DefineConstants>DEBUG;TRACE</DefineConstants>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+        <PlatformTarget>AnyCPU</PlatformTarget>
+        <DebugType>pdbonly</DebugType>
+        <Optimize>true</Optimize>
+        <OutputPath>bin\Release\</OutputPath>
+        <DefineConstants>TRACE</DefineConstants>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+    </PropertyGroup>
+    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+    <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+         Other similar extension points exist, see Microsoft.Common.targets.
+    <Target Name="BeforeBuild">
+    </Target>
+    <Target Name="AfterBuild">
+    </Target>
+    -->
+    <ItemGroup>
+        <Reference Include="Sandbox.Common">
+            <HintPath>F:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\Sandbox.Common.dll</HintPath>
+        </Reference>
+        <Reference Include="Sandbox.Game, processorArchitecture=AMD64">
+            <HintPath>F:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\Sandbox.Game.dll</HintPath>
+        </Reference>
+        <Reference Include="SpaceEngineers, processorArchitecture=AMD64">
+            <HintPath>F:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.exe</HintPath>
+        </Reference>
+        <Reference Include="SpaceEngineers.Game, processorArchitecture=AMD64">
+            <HintPath>F:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.Game.dll</HintPath>
+        </Reference>
+        <Reference Include="SpaceEngineers.ObjectBuilders, processorArchitecture=AMD64">
+            <HintPath>F:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.ObjectBuilders.dll</HintPath>
+        </Reference>
+        <Reference Include="System" />
+        <Reference Include="System.Core" />
+        <Reference Include="System.Xml.Linq" />
+        <Reference Include="System.Data.DataSetExtensions" />
+        <Reference Include="Microsoft.CSharp" />
+        <Reference Include="System.Data" />
+        <Reference Include="System.Net.Http" />
+        <Reference Include="System.Xml" />
+        <Reference Include="VRage">
+            <HintPath>F:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.dll</HintPath>
+        </Reference>
+        <Reference Include="VRage.Game, processorArchitecture=AMD64">
+            <HintPath>F:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Game.dll</HintPath>
+        </Reference>
+        <Reference Include="VRage.Library">
+            <HintPath>F:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Library.dll</HintPath>
+        </Reference>
+        <Reference Include="VRage.Math">
+            <HintPath>F:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Math.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+    <ItemGroup>
+      <Compile Include="AutoAirLock.cs" />
+      <Compile Include="AutoBuildAndRepair.cs" />
+      <Compile Include="AutoDoors.cs" />
+      <Compile Include="AutoHangerDoors.cs" />
+      <Compile Include="CricketManager.cs" />
+      <Compile Include="InventoryManager.cs" />
+      <Compile Include="RefineryScript.cs" />
+      <Compile Include="Stolen\BuildAndRepairExample.cs" />
+      <Compile Include="Stolen\RefineryTimer.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <Content Include=".gitignore" />
+    </ItemGroup>
+    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
