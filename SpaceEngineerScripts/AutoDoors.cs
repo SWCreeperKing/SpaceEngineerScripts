@@ -25,9 +25,11 @@ namespace SpaceEngineers.AutoDoors
 
         #endregion
 
-        List<IMySensorBlock> sensors = new List<IMySensorBlock>();
-        List<IMyDoor> doors = new List<IMyDoor>();
-        List<AutoDoor> autoDoors = new List<AutoDoor>();
+        private const UpdateType UpdateFlags = UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script;
+        
+        private readonly List<IMySensorBlock> Sensors = new List<IMySensorBlock>();
+        private readonly List<IMyDoor> Doors = new List<IMyDoor>();
+        private readonly List<AutoDoor> AutoDoors = new List<AutoDoor>();
 
         public Program()
         {
@@ -37,12 +39,12 @@ namespace SpaceEngineers.AutoDoors
 
         public void Main(string argument, UpdateType updateSource)
         {
-            if ((updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0)
+            if ((updateSource & UpdateFlags) != 0)
             {
                 Setup();
             }
 
-            foreach (var autoDoor in autoDoors)
+            foreach (var autoDoor in AutoDoors)
             {
                 autoDoor.Update();
             }
@@ -50,23 +52,23 @@ namespace SpaceEngineers.AutoDoors
 
         public void Setup()
         {
-            autoDoors.Clear();
-            sensors.Clear();
-            doors.Clear();
+            AutoDoors.Clear();
+            Sensors.Clear();
+            Doors.Clear();
 
-            GridTerminalSystem.GetBlocksOfType(sensors);
-            GridTerminalSystem.GetBlocksOfType(doors);
+            GridTerminalSystem.GetBlocksOfType(Sensors);
+            GridTerminalSystem.GetBlocksOfType(Doors);
 
-            sensors.RemoveAll(sensor => !sensor.CustomName.StartsWith("ADS "));
-            doors.RemoveAll(door => !door.CustomName.StartsWith("ADD "));
+            Sensors.RemoveAll(sensor => !sensor.CustomName.StartsWith("ADS "));
+            Doors.RemoveAll(door => !door.CustomName.StartsWith("ADD "));
 
-            Echo($"Auto Sensors: {sensors.Count}");
-            Echo($"Auto Doors: {doors.Count}");
+            Echo($"Auto Sensors: {Sensors.Count}");
+            Echo($"Auto Doors: {Doors.Count}");
 
-            foreach (var sensor in sensors)
+            foreach (var sensor in Sensors)
             {
                 var id = sensor.CustomName.Remove(0, 4);
-                autoDoors.Add(new AutoDoor(sensor, doors.FindAll(door => door.CustomName.Remove(0, 4) == id).ToList()));
+                AutoDoors.Add(new AutoDoor(sensor, Doors.FindAll(door => door.CustomName.Remove(0, 4) == id).ToList()));
             }
         }
 
@@ -75,7 +77,7 @@ namespace SpaceEngineers.AutoDoors
             public IMySensorBlock Sensor;
             public List<IMyDoor> Doors;
 
-            private List<MyDetectedEntityInfo> Entities = new List<MyDetectedEntityInfo>();
+            private readonly List<MyDetectedEntityInfo> Entities = new List<MyDetectedEntityInfo>();
 
             public AutoDoor(IMySensorBlock sensor, List<IMyDoor> doors)
             {

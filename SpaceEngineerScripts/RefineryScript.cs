@@ -26,31 +26,33 @@ namespace SpaceEngineers.RefineryScript
 
         #endregion
 
-        string[] ids =
+        private const UpdateType UpdateFlags = UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script;
+
+        private readonly string[] Ids =
         {
             "StoneOreToIngot", "IronOreToIngot", "NickelOreToIngot", "SiliconOreToIngot", "MagnesiumOreToIngot",
             "CobaltOreToIngot", "SilverOreToIngot", "GoldOreToIngot", "PlatinumOreToIngot", "UraniumOreToIngot"
         };
 
-        string[] plane =
+        private readonly string[] Plane =
         {
             "Stone", "Iron", "Nickel", "Silicon", "Magnesium", "Cobalt", "Silver", "Gold", "Platinum", "Uranium"
         };
 
-        MyItemType[] itemTypes;
-        MyDefinitionId[] definitions;
-        MonitorSetup refineryDisplay;
-        List<IMyRefinery> refineries = new List<IMyRefinery>();
-        List<IMyTerminalBlock> containers = new List<IMyTerminalBlock>();
-        List<MyProductionItem> refineryQueue = new List<MyProductionItem>();
-        int refineryPage;
-        int resourceNumber;
+        private readonly MyItemType[] ItemTypes;
+        private MyDefinitionId[] Definitions;
+        private MonitorSetup RefineryDisplay;
+        private readonly List<IMyRefinery> Refineries = new List<IMyRefinery>();
+        private readonly List<IMyTerminalBlock> Containers = new List<IMyTerminalBlock>();
+        private readonly List<MyProductionItem> RefineryQueue = new List<MyProductionItem>();
+        private int RefineryPage;
+        private int ResourceNumber;
 
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
-            definitions = ids.Select(id => MyDefinitionId.Parse($"MyObjectBuilder_BlueprintDefinition/{id}")).ToArray();
-            itemTypes = plane.Select(plane => MyItemType.MakeOre(plane)).ToArray();
+            Definitions = Ids.Select(id => MyDefinitionId.Parse($"MyObjectBuilder_BlueprintDefinition/{id}")).ToArray();
+            ItemTypes = Plane.Select(plane => MyItemType.MakeOre(plane)).ToArray();
             Setup();
         }
 
@@ -63,23 +65,23 @@ namespace SpaceEngineers.RefineryScript
                     switch (argument)
                     {
                         case "down":
-                            resourceNumber++;
-                            resourceNumber %= ids.Length;
+                            ResourceNumber++;
+                            ResourceNumber %= Ids.Length;
                             break;
                         case "up":
-                            resourceNumber--;
-                            if (resourceNumber < 0)
+                            ResourceNumber--;
+                            if (ResourceNumber < 0)
                             {
-                                resourceNumber = ids.Length - 1;
+                                ResourceNumber = Ids.Length - 1;
                             }
 
                             break;
                         case "toggle":
-                            var refinery = refineries[refineryPage];
-                            var item = itemTypes[resourceNumber];
+                            var refinery = Refineries[RefineryPage];
+                            var item = ItemTypes[ResourceNumber];
                             var refineryInv = refinery.GetInventory();
 
-                            foreach (var inventory in containers.Select(container => container.GetInventory())
+                            foreach (var inventory in Containers.Select(container => container.GetInventory())
                                          .Where(inv => !inv.IsFull))
                             {
                                 for (var slot = 0; slot < refineryInv.ItemCount; slot++)
@@ -87,18 +89,18 @@ namespace SpaceEngineers.RefineryScript
                                     var itm = refineryInv.GetItemAt(slot);
                                     if (itm == null) continue;
                                     if (!refineryInv.CanTransferItemTo(inventory, itm.Value.Type)) continue;
-                            
+
                                     refineryInv.TransferItemTo(inventory, slot);
                                 }
-                            
+
                                 if (refineryInv.ItemCount == 0) break;
                             }
-                            
+
                             refinery.ClearQueue();
-                            refinery.GetQueue(refineryQueue);
+                            refinery.GetQueue(RefineryQueue);
 
                             var amount = 0f;
-                            foreach (var container in containers)
+                            foreach (var container in Containers)
                             {
                                 var inv = container.GetInventory();
                                 var invItem = inv.FindItem(item);
@@ -110,23 +112,23 @@ namespace SpaceEngineers.RefineryScript
                                 amount += (float) localAmount;
                             }
 
-                            Echo($"setting {plane[resourceNumber]} to prio.1 with amount of {amount}");
+                            Echo($"setting {Plane[ResourceNumber]} to prio.1 with amount of {amount}");
 
                             break;
                         case "page":
-                            refineryPage++;
-                            refineryPage %= refineries.Count;
+                            RefineryPage++;
+                            RefineryPage %= Refineries.Count;
                             break;
                     }
                 }
             }
             catch
             {
-                refineryPage = 0;
-                resourceNumber = 0;
+                RefineryPage = 0;
+                ResourceNumber = 0;
             }
 
-            if ((updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0)
+            if ((updateSource & UpdateFlags) != 0)
             {
                 Setup();
             }
@@ -143,14 +145,14 @@ namespace SpaceEngineers.RefineryScript
 
         public void UpdateRefineryDisplay()
         {
-            var refinery = refineries[refineryPage];
-            refinery.GetQueue(refineryQueue);
+            var refinery = Refineries[RefineryPage];
+            refinery.GetQueue(RefineryQueue);
 
-            var frame = refineryDisplay.Surface.DrawFrame();
-            var surfaceSize = refineryDisplay.ScreenSize;
+            var frame = RefineryDisplay.Surface.DrawFrame();
+            var surfaceSize = RefineryDisplay.ScreenSize;
             var pos = Vector2.Zero;
 
-            var sprite1 = MakeText($"{refineryPage + 1}/{refineries.Count}|{refinery.CustomName}", pos, scale: 2,
+            var sprite1 = MakeText($"{RefineryPage + 1}/{Refineries.Count}|{refinery.CustomName}", pos, scale: 2,
                 align: TextAlignment.LEFT);
             frame.Add(sprite1);
 
@@ -163,31 +165,31 @@ namespace SpaceEngineers.RefineryScript
             pos.X = 0;
             var count = 0;
 
-            foreach (var resource in ids)
+            foreach (var resource in Ids)
             {
                 var index = 99;
 
-                if (refineryQueue.Any(item => item.BlueprintId.SubtypeName == resource))
+                if (RefineryQueue.Any(item => item.BlueprintId.SubtypeName == resource))
                 {
-                    index = refineryQueue.FindIndex(item => item.BlueprintId.SubtypeName == resource) + 1;
+                    index = RefineryQueue.FindIndex(item => item.BlueprintId.SubtypeName == resource) + 1;
                 }
 
                 Color color;
-                if (containers.All(container => container.GetInventory().FindItem(itemTypes[count]) == null) &&
+                if (Containers.All(container => container.GetInventory().FindItem(ItemTypes[count]) == null) &&
                     index == 99)
                 {
-                    color = count == resourceNumber ? Color.MediumVioletRed : Color.Red;
+                    color = count == ResourceNumber ? Color.MediumVioletRed : Color.Red;
                 }
                 else if (index != 99)
                 {
-                    color = count == resourceNumber ? Color.GreenYellow : Color.Green;
+                    color = count == ResourceNumber ? Color.GreenYellow : Color.Green;
                 }
                 else
                 {
-                    color = count == resourceNumber ? Color.Blue : Color.White;
+                    color = count == ResourceNumber ? Color.Blue : Color.White;
                 }
 
-                var materialName = MakeText($"{index:00}   {plane[count]}", pos, TextAlignment.LEFT, color,
+                var materialName = MakeText($"{index:00}   {Plane[count]}", pos, TextAlignment.LEFT, color,
                     scale: 1.3f);
 
                 frame.Add(materialName);
@@ -208,15 +210,15 @@ namespace SpaceEngineers.RefineryScript
 
         public void Setup()
         {
-            GridTerminalSystem.GetBlocksOfType(refineries);
+            GridTerminalSystem.GetBlocksOfType(Refineries);
             //refineries.RemoveAll(refinery => refinery.CubeGrid.Name != Me.CubeGrid.Name);
 
-            GridTerminalSystem.GetBlocksOfType(containers, SearchForCargo);
-            containers.RemoveAll(container
+            GridTerminalSystem.GetBlocksOfType(Containers, SearchForCargo);
+            Containers.RemoveAll(container
                 => container.CustomName != "Main Cargo Container" || container.CubeGrid.Name != Me.CubeGrid.Name);
-            Echo($"containers: {containers.Count}");
+            Echo($"containers: {Containers.Count}");
 
-            refineryDisplay = new MonitorSetup(GridTerminalSystem, "LCD Refinery Display");
+            RefineryDisplay = new MonitorSetup(GridTerminalSystem, "LCD Refinery Display");
         }
 
         public bool SearchForCargo(IMyTerminalBlock block)

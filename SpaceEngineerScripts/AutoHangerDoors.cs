@@ -26,14 +26,16 @@ namespace SpaceEngineers.AutoHangerDoor
 
         #endregion
 
-        List<IMyAirVent> vents = new List<IMyAirVent>();
-        List<IMyDoor> interiorDoors = new List<IMyDoor>();
-        List<IMySensorBlock> sensors = new List<IMySensorBlock>();
-        List<IMyLightingBlock> lights = new List<IMyLightingBlock>();
-        List<IMyAirtightHangarDoor> doors = new List<IMyAirtightHangarDoor>();
-        List<IMyAirtightHangarDoor> doorsInGroup = new List<IMyAirtightHangarDoor>();
-        List<HangerSet> hangers = new List<HangerSet>();
-        List<IMyBlockGroup> groups = new List<IMyBlockGroup>();
+        private const UpdateType UpdateFlags = UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script;
+
+        private readonly List<IMyAirVent> Vents = new List<IMyAirVent>();
+        private readonly List<IMyDoor> InteriorDoors = new List<IMyDoor>();
+        private readonly List<IMySensorBlock> Sensors = new List<IMySensorBlock>();
+        private readonly List<IMyLightingBlock> Lights = new List<IMyLightingBlock>();
+        private readonly List<IMyAirtightHangarDoor> Doors = new List<IMyAirtightHangarDoor>();
+        private readonly List<IMyAirtightHangarDoor> DoorsInGroup = new List<IMyAirtightHangarDoor>();
+        private readonly List<HangerSet> Hangers = new List<HangerSet>();
+        private readonly List<IMyBlockGroup> Groups = new List<IMyBlockGroup>();
 
         public Program()
         {
@@ -43,12 +45,12 @@ namespace SpaceEngineers.AutoHangerDoor
 
         public void Main(string argument, UpdateType updateSource)
         {
-            if ((updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0)
+            if ((updateSource & UpdateFlags) != 0)
             {
                 Setup();
             }
 
-            foreach (var hanger in hangers)
+            foreach (var hanger in Hangers)
             {
                 hanger.Update();
             }
@@ -56,58 +58,58 @@ namespace SpaceEngineers.AutoHangerDoor
 
         public void Setup()
         {
-            hangers.Clear();
+            Hangers.Clear();
 
-            GridTerminalSystem.GetBlocksOfType(interiorDoors);
-            GridTerminalSystem.GetBlocksOfType(sensors);
-            GridTerminalSystem.GetBlocksOfType(lights);
-            GridTerminalSystem.GetBlocksOfType(doors);
-            GridTerminalSystem.GetBlocksOfType(vents);
+            GridTerminalSystem.GetBlocksOfType(InteriorDoors);
+            GridTerminalSystem.GetBlocksOfType(Sensors);
+            GridTerminalSystem.GetBlocksOfType(Lights);
+            GridTerminalSystem.GetBlocksOfType(Doors);
+            GridTerminalSystem.GetBlocksOfType(Vents);
 
-            GridTerminalSystem.GetBlockGroups(groups, group => group.Name.StartsWith("HND "));
-            foreach (var group in groups)
+            GridTerminalSystem.GetBlockGroups(Groups, group => group.Name.StartsWith("HND "));
+            foreach (var group in Groups)
             {
-                group.GetBlocksOfType(doorsInGroup);
-                if (doorsInGroup.All(door => door.CustomName == group.Name)) continue;
+                group.GetBlocksOfType(DoorsInGroup);
+                if (DoorsInGroup.All(door => door.CustomName == group.Name)) continue;
 
-                foreach (var door in doorsInGroup)
+                foreach (var door in DoorsInGroup)
                 {
                     door.CustomName = group.Name;
                 }
 
-                doors.AddRange(doorsInGroup);
+                Doors.AddRange(DoorsInGroup);
             }
 
-            sensors.RemoveAll(sensor => !sensor.CustomName.StartsWith("HNS ") && !sensor.CustomName.StartsWith("HNR "));
-            lights.RemoveAll(light => !light.CustomName.StartsWith("HNIL ") && !light.CustomName.StartsWith("HNOL "));
-            interiorDoors.RemoveAll(door => !door.CustomName.StartsWith("HNID "));
-            doors.RemoveAll(door => !door.CustomName.StartsWith("HND "));
-            vents.RemoveAll(vent => !vent.CustomName.StartsWith("HNV "));
+            Sensors.RemoveAll(sensor => !sensor.CustomName.StartsWith("HNS ") && !sensor.CustomName.StartsWith("HNR "));
+            Lights.RemoveAll(light => !light.CustomName.StartsWith("HNIL ") && !light.CustomName.StartsWith("HNOL "));
+            InteriorDoors.RemoveAll(door => !door.CustomName.StartsWith("HNID "));
+            Doors.RemoveAll(door => !door.CustomName.StartsWith("HND "));
+            Vents.RemoveAll(vent => !vent.CustomName.StartsWith("HNV "));
 
-            Echo($"sensors: {sensors.Count}");
-            Echo($"doors: {doors.Count}");
-            Echo($"lights: {lights.Count}");
-            Echo($"vents: {vents.Count}");
-            Echo($"interior: {interiorDoors.Count}");
+            Echo($"sensors: {Sensors.Count}");
+            Echo($"doors: {Doors.Count}");
+            Echo($"lights: {Lights.Count}");
+            Echo($"vents: {Vents.Count}");
+            Echo($"interior: {InteriorDoors.Count}");
 
-            foreach (var id in sensors.Select(sensor => sensor.CustomName.Split(' ')[1]).Distinct())
+            foreach (var id in Sensors.Select(sensor => sensor.CustomName.Split(' ')[1]).Distinct())
             {
-                hangers.Add(new HangerSet
+                Hangers.Add(new HangerSet
                     (
-                        sensors.Where(sensor => sensor.CustomName.StartsWith($"HNR {id}")).ToList(),
-                        sensors.Where(sensor => sensor.CustomName.StartsWith($"HNS {id}")).ToList(),
-                        doors.Where(door => door.CustomName.StartsWith($"HND {id}")).ToList(),
-                        lights.Where(light
+                        WhereStartsWith(Sensors, $"HNR {id}"),
+                        WhereStartsWith(Sensors, $"HNS {id}"),
+                        WhereStartsWith(Doors, $"HND {id}"),
+                        Lights.Where(light
                                 => light.CustomName.StartsWith($"HNIL {id}") ||
                                    light.CustomName.StartsWith($"HNOL {id}"))
                             .ToList(),
-                        vents.Where(vent => vent.CustomName.StartsWith($"HNV {id}")).ToList(),
-                        interiorDoors.Where(door => door.CustomName.StartsWith($"HNID {id}")).ToList()
+                        WhereStartsWith(Vents, $"HNV {id}"),
+                        WhereStartsWith(InteriorDoors, $"HNID {id}")
                     )
                 );
             }
 
-            hangers.RemoveAll(hanger => hanger == null);
+            Hangers.RemoveAll(hanger => hanger == null);
 
             /*
             sensor = (IMySensorBlock) GridTerminalSystem.GetBlockWithName("HNS Front front");
@@ -120,9 +122,20 @@ namespace SpaceEngineers.AutoHangerDoor
             */
         }
 
+        public List<T> WhereStartsWith<T>(IEnumerable<T> list, string startsWith) where T : IMyTerminalBlock
+            => list.Where(item => item.CustomName.StartsWith(startsWith)).ToList();
+
         public class HangerSet
         {
+            public static readonly Func<IMyDoor, bool> IsAndOpen = door
+                => door.Status == DoorStatus.Open || door.Status == DoorStatus.Opening;
+
+            public static readonly Func<IMyDoor, bool> IsAndClosed = door
+                => door.Status == DoorStatus.Closed || door.Status == DoorStatus.Closing;
+
             public List<string> Ids = new List<string>();
+            public List<string> DoorsToOpen = new List<string>();
+            public List<string> DoorsToClose = new List<string>();
             public List<IMyAirVent> Vents = new List<IMyAirVent>();
             public List<IMyDoor> InteriorDoors = new List<IMyDoor>();
             public List<IMySensorBlock> RoomSensors = new List<IMySensorBlock>();
@@ -133,7 +146,7 @@ namespace SpaceEngineers.AutoHangerDoor
             public Dictionary<string, List<IMyAirtightHangarDoor>> Doors =
                 new Dictionary<string, List<IMyAirtightHangarDoor>>();
 
-            private List<MyDetectedEntityInfo> Entities = new List<MyDetectedEntityInfo>();
+            private readonly List<MyDetectedEntityInfo> Entities = new List<MyDetectedEntityInfo>();
 
             public HangerSet(List<IMySensorBlock> roomSensors, List<IMySensorBlock> outdoorSensors,
                 List<IMyAirtightHangarDoor> hangerDoors, List<IMyLightingBlock> lights, List<IMyAirVent> vents,
@@ -182,6 +195,8 @@ namespace SpaceEngineers.AutoHangerDoor
 
             public void Update()
             {
+                DoorsToOpen.Clear();
+                DoorsToClose.Clear();
                 var isShipExist = false;
 
                 foreach (var sensor in RoomSensors)
@@ -189,77 +204,86 @@ namespace SpaceEngineers.AutoHangerDoor
                     sensor.DetectedEntities(Entities);
                     if (!Entities.Any()) continue;
 
-                    isShipExist = true;
-                    break;
+                    foreach (var id in Ids)
+                    {
+                        DoorsToOpen.Add(id);
+                    }
                 }
 
-                foreach (var id in Ids)
+                if (!DoorsToOpen.Any())
                 {
-                    if (isShipExist)
-                    {
-                        OpenDoors(id);
-                    }
-                    else
+                    foreach (var id in Ids)
                     {
                         DoorSensors[id].DetectedEntities(Entities);
                         if (Entities.Any())
                         {
-                            OpenDoors(id);
+                            DoorsToOpen.Add(id);
                         }
-                        else
+                        else if (Doors[id].Any(door => door.Status != DoorStatus.Closed))
                         {
-                            CloseDoors(id);
+                            DoorsToClose.Add(id);
                         }
                     }
+                }
+
+                if (DoorsToOpen.Any())
+                {
+                    foreach (var id in DoorsToOpen)
+                    {
+                        OpenDoors(id);
+                    }
+                }
+                else if (DoorsToClose.Any())
+                {
+                    foreach (var id in DoorsToClose)
+                    {
+                        CloseDoors(id);
+                    }
+                }
+                else
+                {
+                    Depressurize(false);
                 }
             }
 
             public void OpenDoors(string id)
             {
-                foreach (var inDoor in InteriorDoors.Where(door => door.Status != DoorStatus.Closed || door.Status != DoorStatus.Closing))
+                foreach (var inDoor in InteriorDoors.Where(IsAndClosed))
                 {
                     inDoor.CloseDoor();
                 }
 
                 if (Vents.Any(vent => !vent.Depressurize))
                 {
-                    LightsDepressurize();
-                    foreach (var vent in Vents)
-                    {
-                        vent.Depressurize = true;
-                    }
+                    Depressurize(true);
                 }
-                
+
                 if (Vents.Any(vent => vent.GetOxygenLevel() > 0)) return;
-                
-                ManipulateDoors(id, door => door.Status == DoorStatus.Closed || door.Status == DoorStatus.Closing,
-                    door => door.OpenDoor());
+
+                ManipulateDoors(id, IsAndClosed, door => door.OpenDoor());
             }
 
             public void CloseDoors(string id)
             {
-                if (Doors[id].Any(door => door.Status != DoorStatus.Closed))
+                if (InteriorDoors.Any(door => door.Status != DoorStatus.Closed))
                 {
-                    foreach (var inDoor in InteriorDoors.Where(door => door.Status != DoorStatus.Closed))
+                    foreach (var inDoor in InteriorDoors)
                     {
                         inDoor.CloseDoor();
                     }
                 }
+
+                if (Doors[id].Any(door => door.Status != DoorStatus.Closed))
+                {
+                    ManipulateDoors(id, IsAndOpen, door => door.CloseDoor());
+                }
                 else if (Vents.Any(vent => vent.Depressurize))
                 {
-                    LightsPressurize();
-                    foreach (var vent in Vents)
-                    {
-                        vent.Depressurize = false;
-                    }
+                    Depressurize(false);
                 }
-                
-                ManipulateDoors(id, door => door.Status == DoorStatus.Open || door.Status == DoorStatus.Opening,
-                    door => door.CloseDoor());
             }
 
-            public void ManipulateDoors(string id, Func<IMyAirtightHangarDoor, bool> doorTest,
-                Action<IMyAirtightHangarDoor> action)
+            public void ManipulateDoors(string id, Func<IMyDoor, bool> doorTest, Action<IMyDoor> action)
             {
                 foreach (var hangerDoor in Doors[id].Where(doorTest))
                 {
@@ -267,29 +291,26 @@ namespace SpaceEngineers.AutoHangerDoor
                 }
             }
 
-            public void LightsDepressurize()
+            public void Lights(bool closed)
             {
                 foreach (var inLight in InsideLights)
                 {
-                    inLight.Color = Color.Red;
+                    inLight.Color = closed ? Color.Green : Color.Red;
                 }
 
                 foreach (var outLight in OutsideLights)
                 {
-                    outLight.Color = Color.Green;
+                    outLight.Color = closed ? Color.Red : Color.Green;
                 }
             }
-            
-            public void LightsPressurize()
-            {
-                foreach (var inLight in InsideLights)
-                {
-                    inLight.Color = Color.Green;
-                }
 
-                foreach (var outLight in OutsideLights)
+            public void Depressurize(bool toDepressurize)
+            {
+                Lights(!toDepressurize);
+
+                foreach (var vent in Vents)
                 {
-                    outLight.Color = Color.Red;
+                    vent.Depressurize = toDepressurize;
                 }
             }
         }

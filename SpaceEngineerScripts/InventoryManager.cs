@@ -29,15 +29,17 @@ namespace SpaceEngineers.InventoryManager
 
         #endregion
 
-        MonitorSetup cargoDisplay;
-        List<IMyTerminalBlock> surfaces = new List<IMyTerminalBlock>();
-        List<MonitorSetup> inventoryDisplays = new List<MonitorSetup>();
-        List<IMyShipConnector> connectors = new List<IMyShipConnector>();
-        List<IMyTerminalBlock> containers = new List<IMyTerminalBlock>();
-        List<IMyTerminalBlock> shipContainers = new List<IMyTerminalBlock>();
-        Dictionary<string, float> itemCache = new Dictionary<string, float>();
-        Dictionary<string, Dictionary<string, float>> allItems = new Dictionary<string, Dictionary<string, float>>();
-        Color VeryDarkRed = new Color(50, 0, 0);
+        private const UpdateType UpdateFlags = UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script;
+        
+        private MonitorSetup CargoDisplay;
+        private readonly List<IMyTextPanel> Surfaces = new List<IMyTextPanel>();
+        private readonly List<MonitorSetup> InventoryDisplays = new List<MonitorSetup>();
+        private readonly List<IMyShipConnector> Connectors = new List<IMyShipConnector>();
+        private readonly List<IMyTerminalBlock> Containers = new List<IMyTerminalBlock>();
+        private readonly List<IMyTerminalBlock> ShipContainers = new List<IMyTerminalBlock>();
+        private readonly Dictionary<string, float> ItemCache = new Dictionary<string, float>();
+        private readonly Dictionary<string, Dictionary<string, float>> AllItems = new Dictionary<string, Dictionary<string, float>>();
+        private readonly Color VeryDarkRed = new Color(50, 0, 0);
 
         public Program()
         {
@@ -47,7 +49,7 @@ namespace SpaceEngineers.InventoryManager
 
         public void Main(string argument, UpdateType updateSource)
         {
-            if ((updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0)
+            if ((updateSource & UpdateFlags) != 0)
             {
                 Setup();
             }
@@ -55,25 +57,23 @@ namespace SpaceEngineers.InventoryManager
             UpdateCargoDisplay();
             UpdateInventoryDisplay();
 
-            foreach (var blockGrid in connectors.Where(connector
+            foreach (var blockGrid in Connectors.Where(connector
                              => connector.Status == MyShipConnectorStatus.Connected)
                          .Select(connector => connector.OtherConnector.CubeGrid))
             {
-                GridTerminalSystem.GetBlocksOfType(shipContainers, SearchForShipCargo);
-                shipContainers.RemoveAll(container => container.CubeGrid.CustomName != blockGrid.CustomName);
+                GridTerminalSystem.GetBlocksOfType(ShipContainers, SearchForShipCargo);
+                ShipContainers.RemoveAll(container => container.CubeGrid.CustomName != blockGrid.CustomName);
 
-                foreach (var otherInventory in shipContainers.Select(block => block.GetInventory()))
+                foreach (var otherInventory in ShipContainers.Select(block => block.GetInventory()))
                 {
-                    foreach (var inventory in containers.Select(container => container.GetInventory())
+                    foreach (var inventory in Containers.Select(container => container.GetInventory())
                                  .Where(inv => !inv.IsFull))
                     {
-                        for (var slot = otherInventory.ItemCount - 1; slot >= 0; slot--)
+                        MyInventoryItem? invItem;
+                        while ((invItem = otherInventory.GetItemAt(0)) != null)
                         {
-                            var item = otherInventory.GetItemAt(slot);
-                            if (item == null) continue;
-                            if (!otherInventory.CanTransferItemTo(inventory, item.Value.Type)) continue;
-
-                            otherInventory.TransferItemTo(inventory, slot);
+                            if (!otherInventory.CanTransferItemTo(inventory, invItem.Value.Type)) break;
+                            otherInventory.TransferItemTo(inventory, 0);
                         }
 
                         if (otherInventory.ItemCount == 0) break;
@@ -84,11 +84,11 @@ namespace SpaceEngineers.InventoryManager
 
         public void UpdateCargoDisplay()
         {
-            var containerData = containers.Select(GetSingleCargoData);
+            var containerData = Containers.Select(GetSingleCargoData);
             var totalContainerData = GetTotalData(containerData);
             var totalPercent = Percentify(totalContainerData);
-            var frame = cargoDisplay.Surface.DrawFrame();
-            var surfaceSize = cargoDisplay.SurfaceSize;
+            var frame = CargoDisplay.Surface.DrawFrame();
+            var surfaceSize = CargoDisplay.SurfaceSize;
 
             var pos = Vector2.Zero;
             var sprite1 = MonitorSetup.MakeText($"Total: {totalPercent * 100f:0.###}% full", pos,
@@ -127,14 +127,14 @@ namespace SpaceEngineers.InventoryManager
 
         public void UpdateInventoryDisplay()
         {
-            foreach (var key in allItems.Keys)
+            foreach (var key in AllItems.Keys)
             {
-                allItems[key].Clear();
+                AllItems[key].Clear();
             }
 
             var items = new List<MyInventoryItem>();
 
-            foreach (var inventory in containers.Select(container => container.GetInventory()))
+            foreach (var inventory in Containers.Select(container => container.GetInventory()))
             {
                 inventory.GetItems(items);
 
@@ -144,40 +144,40 @@ namespace SpaceEngineers.InventoryManager
                     var subType = item.Type.SubtypeId;
                     var amount = (float) item.Amount;
 
-                    if (!allItems.ContainsKey(type))
+                    if (!AllItems.ContainsKey(type))
                     {
-                        allItems.Add(type, new Dictionary<string, float>());
+                        AllItems.Add(type, new Dictionary<string, float>());
                     }
 
-                    if (!allItems[type].ContainsKey(subType))
+                    if (!AllItems[type].ContainsKey(subType))
                     {
-                        allItems[type][subType] = 0;
+                        AllItems[type][subType] = 0;
                     }
 
-                    allItems[type][subType] += amount;
+                    AllItems[type][subType] += amount;
                 }
             }
 
-            foreach (var invDisplay in inventoryDisplays)
+            foreach (var invDisplay in InventoryDisplays)
             {
-                itemCache.Clear();
-                if (allItems.Keys.Any(key => invDisplay.Flags.Contains(key)))
+                ItemCache.Clear();
+                if (AllItems.Keys.Any(key => invDisplay.Flags.Contains(key)))
                 {
-                    foreach (var item in allItems.Keys.Where(key => invDisplay.Flags.Contains(key))
-                                 .SelectMany(key => allItems[key]))
+                    foreach (var item in AllItems.Keys.Where(key => invDisplay.Flags.Contains(key))
+                                 .SelectMany(key => AllItems[key]))
                     {
-                        itemCache[item.Key] = item.Value;
+                        ItemCache[item.Key] = item.Value;
                     }
                 }
                 else
                 {
-                    foreach (var item in allItems.Keys.SelectMany(key => allItems[key]))
+                    foreach (var item in AllItems.Keys.SelectMany(key => AllItems[key]))
                     {
-                        itemCache[item.Key] = item.Value;
+                        ItemCache[item.Key] = item.Value;
                     }
                 }
 
-                var orderedItems = itemCache.OrderBy(kv => kv.Key);
+                var orderedItems = ItemCache.OrderBy(kv => kv.Key);
                 invDisplay.UpdateDisplay(orderedItems.Select(kv => kv.Key).ToList(),
                     orderedItems.Select(kv => $"{kv.Value:###,###}").ToList());
             }
@@ -185,35 +185,32 @@ namespace SpaceEngineers.InventoryManager
 
         public void Setup()
         {
-            GridTerminalSystem.GetBlocksOfType(connectors);
-            connectors.RemoveAll(connector
+            GridTerminalSystem.GetBlocksOfType(Connectors);
+            Connectors.RemoveAll(connector
                 => connector.CustomName != "System Auto-pull Connector" || connector.CubeGrid.Name != Me.CubeGrid.Name);
-            Echo($"connectors: {connectors.Count}");
+            Echo($"connectors: {Connectors.Count}");
 
-            GridTerminalSystem.GetBlocksOfType(containers, SearchForCargo);
-            containers.RemoveAll(container
+            GridTerminalSystem.GetBlocksOfType(Containers, SearchForCargo);
+            Containers.RemoveAll(container
                 => container.CustomName != "Main Cargo Container" || container.CubeGrid.Name != Me.CubeGrid.Name);
-            Echo($"containers: {containers.Count}");
+            Echo($"containers: {Containers.Count}");
 
-            cargoDisplay =
-                new MonitorSetup((IMyTextSurface) GridTerminalSystem.GetBlockWithName("LCD Container Display"));
+            CargoDisplay =
+                new MonitorSetup((IMyTextPanel) GridTerminalSystem.GetBlockWithName("LCD Container Display"));
 
-            GridTerminalSystem.GetBlocksOfType(surfaces);
-            surfaces.RemoveAll(surface
-                =>
+            GridTerminalSystem.GetBlocksOfType(Surfaces);
+            Surfaces.RemoveAll(surface
+                => !surface.CustomName.StartsWith("LCD Inventory Display") ||
+                   surface.CubeGrid.Name != Me.CubeGrid.Name);
+
+            InventoryDisplays.Clear();
+            foreach (var surface in Surfaces)
             {
-                var block = surface;
-                return !block.CustomName.StartsWith("LCD Inventory Display") || block.CubeGrid.Name != Me.CubeGrid.Name;
-            });
-
-            inventoryDisplays.Clear();
-            foreach (var surface in surfaces)
-            {
-                inventoryDisplays.Add(new MonitorSetup((IMyTextSurface) surface));
+                InventoryDisplays.Add(new MonitorSetup(surface));
             }
 
-            Echo($"surfaces: {surfaces.Count} | {inventoryDisplays.Count}");
-            Echo($"{string.Join(", ", allItems.Keys)}");
+            Echo($"surfaces: {Surfaces.Count} | {InventoryDisplays.Count}");
+            Echo($"{string.Join(", ", AllItems.Keys)}");
         }
 
         public bool SearchForShipCargo(IMyTerminalBlock block)
@@ -278,17 +275,17 @@ namespace SpaceEngineers.InventoryManager
             public Color[] ColorOptions = { Color.White, new Color(60, 60, 60) };
             public string[] Flags;
 
-            private MySprite ClipRect;
+            private readonly MySprite ClipRect;
             private bool ScrollDirection;
             private int ScrollOffset;
 
-            public MonitorSetup(IMyTextSurface surface)
+            public MonitorSetup(IMyTextPanel surface)
             {
                 Surface = surface;
                 Surface.ContentType = ContentType.SCRIPT;
                 Surface.ScriptBackgroundColor = Color.Black;
                 SurfaceSize = Surface.SurfaceSize;
-                Flags = ((IMyTextPanel) surface).GetPublicTitle().Split(',');
+                Flags = surface.GetPublicTitle().Split(',');
                 if (!Flags.Any())
                 {
                     Flags = new[] { "Default Text" };

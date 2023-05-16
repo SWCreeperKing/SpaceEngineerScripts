@@ -26,14 +26,16 @@ namespace SpaceEngineers.AutoBuildAndRepair
 
         #endregion
 
-        IMyTextSurface panelSurface;
-        Vector2 surfaceSize;
-        Color[] colorOptions = new Color[] { Color.White, new Color(60, 60, 60) };
-        List<IMyShipWelder> repairSystems = new List<IMyShipWelder>();
-        List<IMyAssembler> assemblers = new List<IMyAssembler>();
-        List<long> assemblerIds;
-        Dictionary<MyDefinitionId, int> missing = new Dictionary<MyDefinitionId, int>();
-        Func<IEnumerable<long>, MyDefinitionId, int, int> ensureQueued = null;
+        private const UpdateType UpdateFlags = UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script;
+        
+        private IMyTextSurface PanelSurface;
+        private Vector2 SurfaceSize;
+        private readonly Color[] ColorOptions = new Color[] { Color.White, new Color(60, 60, 60) };
+        private readonly List<IMyShipWelder> RepairSystems = new List<IMyShipWelder>();
+        private readonly List<IMyAssembler> Assemblers = new List<IMyAssembler>();
+        private List<long> AssemblerIds;
+        private readonly Dictionary<MyDefinitionId, int> Missing = new Dictionary<MyDefinitionId, int>();
+        private Func<IEnumerable<long>, MyDefinitionId, int, int> EnsureQueued = null;
 
         public Program()
         {
@@ -43,16 +45,16 @@ namespace SpaceEngineers.AutoBuildAndRepair
 
         public void Main(string argument, UpdateType updateSource)
         {
-            if ((updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0)
+            if ((updateSource & UpdateFlags) != 0)
             {
                 Setup();
             }
 
-            if (ensureQueued == null)
+            if (EnsureQueued == null)
             {
                 try
                 {
-                    ensureQueued = repairSystems[0]
+                    EnsureQueued = RepairSystems[0]
                         .GetValue<Func<IEnumerable<long>, VRage.Game.MyDefinitionId, int, int>>(
                             "BuildAndRepair.ProductionBlock.EnsureQueued");
                 }
@@ -62,17 +64,17 @@ namespace SpaceEngineers.AutoBuildAndRepair
                 }
             }
             
-            var frame = panelSurface.DrawFrame();
+            var frame = PanelSurface.DrawFrame();
 
             MissingComponents();
-            if (!missing.Any())
+            if (!Missing.Any())
             {
                 frame.Add(MySprite.CreateText("All Good!", "Debug", Color.Green, 3f));
                 frame.Dispose();
                 return;
             }
 
-            var pos = new Vector2(surfaceSize.X / 2f, 0);
+            var pos = new Vector2(SurfaceSize.X / 2f, 0);
             var sprite1 = MakeText("Resources Needed", pos, color: Color.Red, scale: 2);
             frame.Add(sprite1);
 
@@ -84,17 +86,17 @@ namespace SpaceEngineers.AutoBuildAndRepair
             pos.X = 0;
 
             var numberPos = pos;
-            numberPos.X = surfaceSize.X;
+            numberPos.X = SurfaceSize.X;
 
             var count = 0;
-            foreach (var material in missing.Keys)
+            foreach (var material in Missing.Keys)
             {
-                var color = colorOptions[count++];
-                count %= colorOptions.Length;
+                var color = ColorOptions[count++];
+                count %= ColorOptions.Length;
 
                 var materialName = MakeText(material.SubtypeName, pos, align: TextAlignment.LEFT, color: color,
                     scale: 1.3f);
-                var materialAmount = MakeText($"{missing[material]}", numberPos, align: TextAlignment.RIGHT,
+                var materialAmount = MakeText($"{Missing[material]}", numberPos, align: TextAlignment.RIGHT,
                     color: color, scale: 1.3f);
 
                 frame.Add(materialName);
@@ -118,9 +120,9 @@ namespace SpaceEngineers.AutoBuildAndRepair
 
         public void MissingComponents()
         {
-            missing.Clear();
+            Missing.Clear();
 
-            foreach (var builder in repairSystems)
+            foreach (var builder in RepairSystems)
             {
                 var dict =
                     builder.GetValue<Dictionary<MyDefinitionId, int>>("BuildAndRepair.MissingComponents");
@@ -129,13 +131,13 @@ namespace SpaceEngineers.AutoBuildAndRepair
                 int value;
                 foreach (var newItem in dict)
                 {
-                    if (missing.TryGetValue(newItem.Key, out value))
+                    if (Missing.TryGetValue(newItem.Key, out value))
                     {
-                        if (newItem.Value > value) missing[newItem.Key] = newItem.Value;
+                        if (newItem.Value > value) Missing[newItem.Key] = newItem.Value;
                     }
                     else
                     {
-                        missing.Add(newItem.Key, newItem.Value);
+                        Missing.Add(newItem.Key, newItem.Value);
                     }
                 }
             }
@@ -143,26 +145,26 @@ namespace SpaceEngineers.AutoBuildAndRepair
 
         public void CheckAssemblerQueues()
         {
-            if (ensureQueued == null) return;
-            if (assemblerIds.Count <= 0) return;
-            foreach (var item in missing)
+            if (EnsureQueued == null) return;
+            if (AssemblerIds.Count <= 0) return;
+            foreach (var item in Missing)
             {
-                ensureQueued(assemblerIds, item.Key, item.Value);
+                EnsureQueued(AssemblerIds, item.Key, item.Value);
             }
         }
 
         public void Setup()
         {
-            panelSurface = (IMyTextSurface) GridTerminalSystem.GetBlockWithName("LCD ResourceAlert");
-            panelSurface.ContentType = ContentType.SCRIPT;
-            panelSurface.ScriptBackgroundColor = Color.Black;
+            PanelSurface = (IMyTextSurface) GridTerminalSystem.GetBlockWithName("LCD ResourceAlert");
+            PanelSurface.ContentType = ContentType.SCRIPT;
+            PanelSurface.ScriptBackgroundColor = Color.Black;
 
-            surfaceSize = panelSurface.SurfaceSize;
+            SurfaceSize = PanelSurface.SurfaceSize;
 
-            GridTerminalSystem.GetBlockGroupWithName("Construction").GetBlocksOfType(repairSystems);
-            GridTerminalSystem.GetBlockGroupWithName("Crafting Slaves").GetBlocksOfType(assemblers);
+            GridTerminalSystem.GetBlockGroupWithName("Construction").GetBlocksOfType(RepairSystems);
+            GridTerminalSystem.GetBlockGroupWithName("Crafting Slaves").GetBlocksOfType(Assemblers);
 
-            assemblerIds = assemblers.Select(asm => asm.EntityId).ToList();
+            AssemblerIds = Assemblers.Select(asm => asm.EntityId).ToList();
         }
 
         #region PreludeFooter

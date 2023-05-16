@@ -27,10 +27,12 @@ namespace SpaceEngineers.CricketManager
 
         #endregion
 
-        List<IMyTerminalBlock> containers = new List<IMyTerminalBlock>();
-        List<IMyTextSurface> surfaces = new List<IMyTextSurface>();
-        List<IMyInteriorLight> alarms = new List<IMyInteriorLight>();
-        Color VeryDarkRed = new Color(50, 0, 0);
+        private const UpdateType UpdateFlags = UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script;
+        
+        private readonly List<IMyTerminalBlock> Containers = new List<IMyTerminalBlock>();
+        private readonly List<IMyTextSurface> Surfaces = new List<IMyTextSurface>();
+        private readonly List<IMyInteriorLight> Alarms = new List<IMyInteriorLight>();
+        private readonly Color VeryDarkRed = new Color(50, 0, 0);
 
         public Program()
         {
@@ -40,23 +42,23 @@ namespace SpaceEngineers.CricketManager
 
         public void Main(string argument, UpdateType updateSource)
         {
-            if ((updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0)
+            if ((updateSource & UpdateFlags) != 0)
             {
                 Setup();
             }
 
-            var containerData = containers.Select(GetSingleCargoData);
+            var containerData = Containers.Select(GetSingleCargoData);
             var totalContainerData = GetTotalData(containerData);
             var totalPercent = Percentify(totalContainerData);
             var color = GetPercentColor(totalPercent);
 
-            foreach (var surface in surfaces)
+            foreach (var surface in Surfaces)
             {
                 surface.WriteText($"{totalPercent * 100f:0.###}% full");
                 surface.FontColor = color;
             }
 
-            foreach (var alarm in alarms)
+            foreach (var alarm in Alarms)
             {
                 alarm.Color = color;
                 alarm.BlinkIntervalSeconds = GetInterval(totalPercent);
@@ -65,14 +67,14 @@ namespace SpaceEngineers.CricketManager
 
         public void Setup()
         {
-            GridTerminalSystem.GetBlocksOfType(containers, SearchForCargo);
-            containers.RemoveAll(container => container.CubeGrid.Name != Me.CubeGrid.Name);
-            Echo($"Found {containers.Count} Inventories");
+            GridTerminalSystem.GetBlocksOfType(Containers, SearchForCargo);
+            Containers.RemoveAll(container => container.CubeGrid.Name != Me.CubeGrid.Name);
+            Echo($"Found {Containers.Count} Inventories");
             
-            GridTerminalSystem.GetBlocksOfType(surfaces, SearchForSurface);
-            surfaces.RemoveAll(surface => ((IMyTerminalBlock) surface).CubeGrid.Name != Me.CubeGrid.Name);
+            GridTerminalSystem.GetBlocksOfType(Surfaces);
+            Surfaces.RemoveAll(surface => ((IMyTerminalBlock) surface).CubeGrid.Name != Me.CubeGrid.Name);
 
-            foreach (var surface in surfaces)
+            foreach (var surface in Surfaces)
             {
                 surface.ContentType = ContentType.TEXT_AND_IMAGE;
                 surface.FontSize = 6.2f;
@@ -80,17 +82,17 @@ namespace SpaceEngineers.CricketManager
                 surface.TextPadding = 20f;
             }
 
-            Echo($"Surfaces {surfaces.Count} Found");
+            Echo($"Surfaces {Surfaces.Count} Found");
             
-            GridTerminalSystem.GetBlocksOfType(alarms, SearchForAlarm);
-            alarms.RemoveAll(alarm => alarm.CubeGrid.Name != Me.CubeGrid.Name);
+            GridTerminalSystem.GetBlocksOfType(Alarms);
+            Alarms.RemoveAll(alarm => alarm.CubeGrid.Name != Me.CubeGrid.Name);
 
-            foreach (var alarm in alarms)
+            foreach (var alarm in Alarms)
             {
                 alarm.BlinkLength = 80f;
             }
 
-            Echo($"Alarms {alarms.Count} Found");
+            Echo($"Alarms {Alarms.Count} Found");
         }
 
         public bool SearchForCargo(IMyTerminalBlock block)
@@ -100,18 +102,6 @@ namespace SpaceEngineers.CricketManager
             if (block is IMyShipDrill) return true;
             if (block is IMyShipGrinder) return true;
             if (block is IMyShipConnector) return true;
-            return false;
-        }
-
-        public bool SearchForSurface(IMyTextSurface surface)
-        {
-            if (surface is IMyTextSurface) return true;
-            return false;
-        }
-
-        public bool SearchForAlarm(IMyInteriorLight light)
-        {
-            if (light is IMyInteriorLight) return true;
             return false;
         }
 
